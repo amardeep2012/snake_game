@@ -193,26 +193,14 @@ fn update(&mut self, _ctx: &mut Context) -> GameResult {
 
         
         // Draw Score
-        let score_text = graphics::Text::new(format!("Score: {}", self.score));
+        let mut  score_text = graphics::Text::new(format!("Score: {}", self.score));
+        score_text.set_scale(30.0);
         let dest = ggez::glam::Vec2::new(20.0, 20.0);
-        canvas.draw(&score_text, dest);
+        canvas.draw(&score_text, dest);;
         if self.game_over {
-            // let text = graphics::Text::new("Game Over!");
-            let text_fragment = graphics::TextFragment::from("Game Over!");
-            let text = graphics::Text::new(text_fragment);
-
-            let dest_point = Point { x: WIDTH / 2 - 5, y: HEIGHT / 2 };
-            let dest_rect = Rect::new(
-                (dest_point.x as f32) * GRID_SIZE,
-                (dest_point.y as f32) * GRID_SIZE,
-                GRID_SIZE * 10.0,
-                GRID_SIZE * 2.0,
-            );
-            canvas.draw(&text, DrawParam::default().dest_rect(dest_rect));
-        }
-        if self.game_over {
-            let text = graphics::Text::new("Game Over! Press R to restart");
-            let dest = ggez::glam::Vec2::new(40.0, GRID_SIZE * HEIGHT as f32 / 2.0);
+            let mut text = graphics::Text::new("Game Over! Press R to restart");
+            text.set_scale(30.0);
+            let dest = ggez::glam::Vec2::new(50.0, GRID_SIZE * HEIGHT as f32 / 2.0);
             canvas.draw( &text, dest);
         }
 
@@ -221,18 +209,22 @@ fn update(&mut self, _ctx: &mut Context) -> GameResult {
     }
 
     fn key_down_event(&mut self, _ctx: &mut Context, input: ggez::input::keyboard::KeyInput, _repeated: bool) -> GameResult {
-        if self.game_over {
-            return Ok(());
-        }
-
         if let Some(key) = input.keycode {
-            self.dir = match key {
-                KeyCode::Up if self.dir != Direction::Down => Direction::Up,
-                KeyCode::Down if self.dir != Direction::Up => Direction::Down,
-                KeyCode::Left if self.dir != Direction::Right => Direction::Left,
-                KeyCode::Right if self.dir != Direction::Left => Direction::Right,
-                _ => self.dir,
-            };
+            if self.game_over && key == KeyCode::R {
+                // Reset the game state
+                *self = GameState::new();
+                return Ok(());
+            }
+
+            if !self.game_over {
+                self.dir = match key {
+                    KeyCode::Up if self.dir != Direction::Down => Direction::Up,
+                    KeyCode::Down if self.dir != Direction::Up => Direction::Down,
+                    KeyCode::Left if self.dir != Direction::Right => Direction::Left,
+                    KeyCode::Right if self.dir != Direction::Left => Direction::Right,
+                    _ => self.dir,
+                };
+            }
         }
         Ok(())
     }
