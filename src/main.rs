@@ -63,58 +63,12 @@ impl GameState {
             }
         }
     }
-
-    // fn update_snake(&mut self) {
-    //     if self.game_over {
-    //         return;
-    //     }
-
-    //     let head = self.snake.front().unwrap();
-    //     let new_head = match self.dir {
-    //         Direction::Up => Point {
-    //             x: head.x,
-    //             y: head.y.wrapping_sub(1),
-    //         },
-    //         Direction::Down => Point {
-    //             x: head.x,
-    //             y: head.y + 1,
-    //         },
-    //         Direction::Left => Point {
-    //             x: head.x.wrapping_sub(1),
-    //             y: head.y,
-    //         },
-        //     Direction::Right => Point {
-        //         x: head.x + 1,
-        //         y: head.y,
-        //     },
-        // };
-
-        // // Check for collision with walls
-        // if new_head.x < 0 || new_head.x >= WIDTH || new_head.y < 0 || new_head.y >= HEIGHT {
-        //     self.game_over = true;
-        //     return;
-        // }
-
-        // // Check for collision with self
-        // if self.snake.contains(&new_head) {
-        //     self.game_over = true;
-        //     return;
-        // }
-        // self.snake.push_front(new_head);
-        // if new_head == self.food {
-        //     // self.snake.push_front(new_head);
-        //     self.food = GameState::random_food(&self.snake);
-        // } else {
-    //         // self.snake.push_front(new_head);
-    //         self.snake.pop_back();
-    //     }
-    // }
 }
 
 impl EventHandler for GameState {
-fn update(&mut self, _ctx: &mut Context) -> GameResult {
+fn update(&mut self, ctx: &mut Context) -> GameResult {
     if self.game_over {
-        return Ok(()); // Skip update
+        return Ok(());
     }
 
     if self.last_update.elapsed() >= Duration::from_millis(100) {
@@ -230,6 +184,129 @@ fn update(&mut self, _ctx: &mut Context) -> GameResult {
     }
 }
 
+struct GameOverState {
+    score: u32,
+}
+
+impl EventHandler for GameOverState {
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        Ok(())
+    }
+
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::BLACK);
+
+        // Get window dimensions
+        let (window_width, window_height) = ctx.gfx.drawable_size();
+
+        // Display "Game Over" message
+        let mut game_over_text = graphics::Text::new("Game Over!");
+        game_over_text.set_scale(50.0);
+        let game_over_width = game_over_text.measure(ctx)?.x;
+        let game_over_dest = ggez::glam::Vec2::new(
+            (window_width - game_over_width) / 2.0,
+            window_height / 3.0,
+        );
+        canvas.draw(&game_over_text, game_over_dest);
+
+        // Display final score
+        let mut score_text = graphics::Text::new(format!("Your Score: {}", self.score));
+        score_text.set_scale(40.0);
+        let score_width = score_text.measure(ctx)?.x;
+        let score_dest = ggez::glam::Vec2::new(
+            (window_width - score_width) / 2.0,
+            window_height / 2.0,
+        );
+        canvas.draw(&score_text, score_dest);
+
+        // Display restart instruction
+        let mut restart_text = graphics::Text::new("Press R to restart");
+        restart_text.set_scale(30.0);
+        let restart_width = restart_text.measure(ctx)?.x;
+        let restart_dest = ggez::glam::Vec2::new(
+            (window_width - restart_width) / 2.0,
+            window_height * 2.0 / 3.0,
+        );
+        canvas.draw(&restart_text, restart_dest);
+
+        canvas.finish(ctx)?;
+        Ok(())
+    }
+
+    fn key_down_event(&mut self, ctx: &mut Context, input: ggez::input::keyboard::KeyInput, _repeated: bool) -> GameResult {
+        if let Some(key) = input.keycode {
+            if key == KeyCode::R {
+                // Restart the game
+                let game = GameState::new();
+                let (ctx, event_loop) = ContextBuilder::new("snake_game", "you")
+                .window_setup(ggez::conf::WindowSetup::default().title("Snake Game in Rust"))
+                .window_mode(
+                    ggez::conf::WindowMode::default().dimensions(
+                        GRID_SIZE * WIDTH as f32,
+                        GRID_SIZE * HEIGHT as f32,
+                    ),
+                )
+                .build().unwrap();
+            
+                event::run(ctx, event_loop, game);
+            }
+        }
+        Ok(())
+    }
+}
+
+enum AppState {
+    Game(GameState),
+    GameOver(GameOverState),
+}
+
+impl EventHandler for AppState {
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
+        match self {
+            AppState::Game(game_state) => {
+                game_state.update(ctx)?;
+                if game_state.game_over {
+                    // Transition to GameOverState
+                    *self = AppState::GameOver(GameOverState {
+                        score: game_state.score,
+                    });
+                }
+            }
+            AppState::GameOver(game_over_state) => {
+                game_over_state.update(ctx)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        match self {
+            AppState::Game(game_state) => game_state.draw(ctx),
+            AppState::GameOver(game_over_state) => game_over_state.draw(ctx),
+        }
+    }
+
+    fn key_down_event(
+        &mut self,
+        ctx: &mut Context,
+        input: ggez::input::keyboard::KeyInput,
+        repeated: bool,
+    ) -> GameResult {
+        match self {
+            AppState::Game(game_state) => game_state.key_down_event(ctx, input, repeated),
+            AppState::GameOver(game_over_state) => {
+                if let Some(key) = input.keycode {
+                    if key == KeyCode::R {
+                        // Restart the game
+                        *self = AppState::Game(GameState::new());
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
 fn main() -> GameResult {
     let (ctx, event_loop) = ContextBuilder::new("snake_game", "you")
         .window_setup(ggez::conf::WindowSetup::default().title("Snake Game in Rust"))
@@ -241,6 +318,6 @@ fn main() -> GameResult {
         )
         .build()?;
 
-    let game = GameState::new();
-    event::run(ctx, event_loop, game)
+    let initial_state = AppState::Game(GameState::new());
+    event::run(ctx, event_loop, initial_state)
 }
