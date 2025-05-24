@@ -66,7 +66,7 @@ impl GameState {
 }
 
 impl EventHandler for GameState {
-fn update(&mut self, ctx: &mut Context) -> GameResult {
+fn update(&mut self, _ctx: &mut Context) -> GameResult {
     if self.game_over {
         return Ok(());
     }
@@ -150,7 +150,7 @@ fn update(&mut self, ctx: &mut Context) -> GameResult {
         let mut  score_text = graphics::Text::new(format!("Score: {}", self.score));
         score_text.set_scale(30.0);
         let dest = ggez::glam::Vec2::new(20.0, 20.0);
-        canvas.draw(&score_text, dest);;
+        canvas.draw(&score_text, dest);
         if self.game_over {
             let mut text = graphics::Text::new("Game Over! Press R to restart");
             text.set_scale(30.0);
@@ -233,7 +233,7 @@ impl EventHandler for GameOverState {
         Ok(())
     }
 
-    fn key_down_event(&mut self, ctx: &mut Context, input: ggez::input::keyboard::KeyInput, _repeated: bool) -> GameResult {
+    fn key_down_event(&mut self, _ctx: &mut Context, input: ggez::input::keyboard::KeyInput, _repeated: bool) -> GameResult {
         if let Some(key) = input.keycode {
             if key == KeyCode::R {
                 // Restart the game
@@ -294,7 +294,7 @@ impl EventHandler for AppState {
     ) -> GameResult {
         match self {
             AppState::Game(game_state) => game_state.key_down_event(ctx, input, repeated),
-            AppState::GameOver(game_over_state) => {
+            AppState::GameOver(_game_over_state) => {
                 if let Some(key) = input.keycode {
                     if key == KeyCode::R {
                         // Restart the game
